@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,6 +12,7 @@
 <link rel="manifest" href="manifest.json">
 <title>Business Time</title>
 <style>
+html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 :root{--bg:#0e0f12;--card:#17191e;--line:#262931;--txt:#eef0f3;--mut:#8a8f9a;--acc:#ffb020;--on:#2ecc71;--off:#ff4d4d}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--txt);font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;padding:calc(20px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;max-width:560px;margin:auto}
@@ -81,6 +82,8 @@ h1{font-size:15px;letter-spacing:.2em;text-transform:uppercase;color:var(--acc);
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
+["gesturestart","gesturechange","gestureend"].forEach(e=>document.addEventListener(e,ev=>ev.preventDefault(),{passive:false}));
+document.addEventListener("touchmove",e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
 /* ===== Config Firebase (projet Cali Crew) ===== */
 const firebaseConfig = {
   apiKey: "AIzaSyCVHv8IpIVB_7HRYGy8RBzyxeTfDEoO66E",
