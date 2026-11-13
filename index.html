@@ -127,7 +127,10 @@ document.getElementById('btn').onclick=()=>{
   if(S.active){
     if(Date.now()-S.active>=60000)S.sessions.push({s:S.active,e:Date.now()});else S.note=Date.now();
     S.active=null;
-  }else S.active=Date.now();
+  }else{
+    S.active=Date.now();
+    if('Notification' in window&&Notification.permission==='default')Notification.requestPermission().then(()=>{lastN=undefined;syncNotif();}).catch(()=>{});
+  }
   save();tick();render();
 };
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
@@ -135,7 +138,26 @@ document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));render();
 });
 
+/* ===== Notification + badge ===== */
+let swReg=null,lastN;
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').then(r=>{swReg=r;lastN=undefined;syncNotif();}).catch(()=>{});
+function syncNotif(){
+  const act=S.active||null;
+  if(act===lastN)return;
+  lastN=act;
+  try{
+    if(act){if(navigator.setAppBadge)navigator.setAppBadge(1).catch(()=>{});}
+    else if(navigator.clearAppBadge)navigator.clearAppBadge().catch(()=>{});
+  }catch(e){}
+  if(!swReg||!('Notification' in window)||Notification.permission!=='granted')return;
+  swReg.getNotifications({tag:'bt-session'}).then(ns=>{
+    ns.forEach(n=>n.close());
+    if(act)swReg.showNotification('Business Time',{body:'Session en cours depuis '+hm(act),tag:'bt-session',icon:'apple-touch-icon.png',badge:'icon-192.png',silent:true,requireInteraction:true});
+  }).catch(()=>{});
+}
+
 function tick(){
+  syncNotif();
   const b=document.getElementById('btn'),t=document.getElementById('timer'),s=document.getElementById('sub');
   if(S.active){
     const ms=Date.now()-S.active,sec=Math.floor(ms/1000);
