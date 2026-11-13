@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Business Time">
+<meta name="theme-color" content="#0e0f12">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<title>Business Time</title>
+<style>
+:root{--bg:#0e0f12;--card:#17191e;--line:#262931;--txt:#eef0f3;--mut:#8a8f9a;--acc:#ffb020;--on:#2ecc71;--off:#ff4d4d}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;padding:calc(20px + env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;max-width:560px;margin:auto}
+h1{font-size:15px;letter-spacing:.2em;text-transform:uppercase;color:var(--acc);text-align:center;font-weight:800}
+.hero{text-align:center;padding:24px 0 18px}
+#timer{font-variant-numeric:tabular-nums;font-size:52px;font-weight:800;margin:14px 0 4px}
+#sub{color:var(--mut);font-size:14px;min-height:18px}
+#btn{margin-top:20px;width:100%;height:54px;border-radius:12px;border:1px solid var(--acc);font-size:15px;font-weight:800;letter-spacing:.12em;color:var(--acc);cursor:pointer;background:var(--card);transition:.2s}
+#btn.run{background:var(--acc);color:#111;animation:p 2s infinite}
+@keyframes p{50%{box-shadow:0 0 0 6px rgba(255,176,32,.15)}}
+.tabs{display:flex;gap:6px;background:var(--card);padding:5px;border-radius:12px;margin:18px 0 14px}
+.tabs button{flex:1;padding:10px;border:none;border-radius:9px;background:none;color:var(--mut);font-weight:700;font-size:14px;cursor:pointer}
+.tabs button.act{background:var(--acc);color:#111}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.nav button{background:var(--line);border:none;color:var(--txt);width:34px;height:34px;border-radius:9px;font-size:18px;cursor:pointer}
+.nav b{font-size:15px;display:inline-block}
+.nav b::first-letter{text-transform:uppercase}
+.big{font-size:34px;font-weight:800;color:var(--acc);font-variant-numeric:tabular-nums}
+.lbl{color:var(--mut);font-size:13px;margin-bottom:14px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.row .d{color:var(--acc);font-weight:700}
+.row .x{background:none;border:none;color:var(--mut);font-size:16px;cursor:pointer;margin-left:10px}
+.empty{color:var(--mut);text-align:center;padding:18px 0;font-size:14px}
+.bars{display:flex;gap:6px;align-items:flex-end;height:120px;margin-top:6px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer}
+.bar i{width:100%;background:var(--acc);border-radius:5px 5px 0 0;min-height:2px}
+.bar span{font-size:11px;color:var(--mut);margin-top:5px}
+.bar em{font-size:10px;font-style:normal;color:var(--txt);margin-bottom:3px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .h{font-size:11px;color:var(--mut);text-align:center;padding-bottom:4px}
+.cal .c{aspect-ratio:1;border-radius:8px;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;cursor:pointer}
+.cal .c small{font-size:10px;color:var(--acc);font-weight:700}
+.cal .c.w{background:rgba(255,176,32,.14)}
+.cal .c.t{outline:2px solid var(--acc)}
+.foot{color:var(--mut);font-size:12px;text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<h1>Business Time</h1>
+<div class="hero">
+  <div id="timer">00:00:00</div>
+  <div id="sub">Prêt à bosser</div>
+  <button id="btn">START</button>
+</div>
+<div class="tabs">
+  <button data-t="day" class="act">Jour</button>
+  <button data-t="week">Semaine</button>
+  <button data-t="month">Mois</button>
+</div>
+<div class="card" id="view"></div>
+<div class="foot" id="foot"></div>
+
+<script type="application/json" id="bt-data">{"sessions":[],"active":null}</script>
+<script>
+(function(){
+const TEMPLATE='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+const KEY='business-time-v1';
+let S=JSON.parse(document.getElementById('bt-data').textContent);
+try{const l=JSON.parse(localStorage.getItem(KEY));if(l&&Array.isArray(l.sessions)&&(l.u||0)>(S.u||0))S=l;}catch(e){}
+let tab='day',cur=new Date(),art=null;
+
+const pad=n=>String(n).padStart(2,'0');
+const hm=d=>{d=new Date(d);return pad(d.getHours())+'h'+pad(d.getMinutes())};
+const dur=ms=>{const m=Math.round(ms/60000);return Math.floor(m/60)+'h'+pad(m%60)};
+const key=d=>{d=new Date(d);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const sod=d=>{d=new Date(d);d.setHours(0,0,0,0);return d};
+const mon=d=>{d=sod(d);d.setDate(d.getDate()-((d.getDay()+6)%7));return d};
+const addD=(d,n)=>{d=new Date(d);d.setDate(d.getDate()+n);return d};
+const all=()=>S.active?S.sessions.concat([{s:S.active,e:Date.now(),live:1}]):S.sessions;
+const rng=d=>{const a=sod(d);return [a.getTime(),addD(a,1).getTime()]};
+const ov=(x,d)=>{const [a,z]=rng(d);return Math.max(0,Math.min(x.e,z)-Math.max(x.s,a))};
+const daySess=d=>{const [a,z]=rng(d);return all().filter(x=>x.s<z&&Math.max(x.e,x.s+1)>a).sort((p,q)=>p.s-q.s)};
+const dayTot=d=>daySess(d).reduce((t,x)=>t+ov(x,d),0);
+
+function save(){
+  S.u=Date.now();
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  if(art){
+    const html=TEMPLATE.replace(/(<script type="application\/json" id="bt-data">)[\s\S]*?(<\/script>)/,'$1'+JSON.stringify(S).replace(/</g,'\\u003c')+'$2');
+    art.publish(html).catch(()=>{});
+  }
+}
+
+document.getElementById('btn').onclick=()=>{
+  if(S.active){
+    if(Date.now()-S.active>=60000)S.sessions.push({s:S.active,e:Date.now()});else S.note=Date.now();
+    S.active=null;
+  }else S.active=Date.now();
+  save();tick();render();
+};
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  tab=b.dataset.t;cur=new Date();
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x===b));render();
+});
+
+function tick(){
+  const b=document.getElementById('btn'),t=document.getElementById('timer'),s=document.getElementById('sub');
+  if(S.active){
+    const ms=Date.now()-S.active,sec=Math.floor(ms/1000);
+    t.textContent=pad(Math.floor(sec/3600))+':'+pad(Math.floor(sec/60)%60)+':'+pad(sec%60);
+    s.textContent='Session en cours depuis '+hm(S.active);
+    b.textContent='STOP';b.classList.add('run');
+  }else{
+    t.textContent='00:00:00';
+    s.textContent=(S.note&&Date.now()-S.note<5000)?'Session de moins d’1 min ignorée':"Aujourd'hui : "+dur(dayTot(new Date()));
+    b.textContent='START';b.classList.remove('run');
+  }
+}
+
+window.del=i=>{const x=daySess(cur)[i];if(x.live)return;S.sessions=S.sessions.filter(y=>!(y.s===x.s&&y.e===x.e));save();render();};
+window.go=n=>{
+  if(tab==='day')cur=addD(cur,n);
+  else if(tab==='week')cur=addD(cur,7*n);
+  else cur=new Date(cur.getFullYear(),cur.getMonth()+n,1);
+  render();
+};
+window.openDay=t=>{cur=new Date(t);tab='day';document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('act',x.dataset.t==='day'));render();};
+
+function nav(label){return '<div class="nav"><button onclick="go(-1)">‹</button><b>'+label+'</b><button onclick="go(1)">›</button></div>'}
+
+function render(){
+  const v=document.getElementById('view');let h='';
+  if(tab==='day'){
+    const ss=daySess(cur);
+    h=nav(cur.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}));
+    h+='<div class="big">'+dur(dayTot(cur))+'</div><div class="lbl">'+ss.length+' session'+(ss.length>1?'s':'')+'</div>';
+    h+=ss.length?ss.map((x,i)=>'<div class="row"><span>'+hm(x.s)+(key(x.s)!==key(cur)?' (veille)':'')+' → '+(x.live?'en cours':hm(x.e)+(key(x.e)!==key(cur)?' (lendemain)':''))+'</span><span><span class="d">'+dur(ov(x,cur))+'</span>'+(x.live?'':'<button class="x" onclick="del('+i+')">✕</button>')+'</span></div>').join(''):'<div class="empty">Aucune session ce jour-là</div>';
+  }else if(tab==='week'){
+    const m=mon(cur),days=[...Array(7)].map((_,i)=>addD(m,i)),tots=days.map(dayTot),tot=tots.reduce((a,b)=>a+b,0),max=Math.max(...tots,3600000);
+    h=nav('Sem. du '+m.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}));
+    h+='<div class="big">'+dur(tot)+'</div><div class="lbl">Moyenne / jour travaillé : '+dur(tot/Math.max(1,tots.filter(x=>x>0).length))+'</div>';
+    h+='<div class="bars">'+days.map((d,i)=>'<div class="bar" onclick="openDay('+d.getTime()+')"><em>'+(tots[i]?dur(tots[i]):'')+'</em><i style="height:'+(tots[i]/max*80)+'%"></i><span>'+['L','M','M','J','V','S','D'][i]+'</span></div>').join('')+'</div>';
+  }else{
+    const y=cur.getFullYear(),mo=cur.getMonth(),first=new Date(y,mo,1),n=new Date(y,mo+1,0).getDate(),off=(first.getDay()+6)%7;
+    let tot=0,cells='',td=key(new Date());
+    for(let i=0;i<off;i++)cells+='<div></div>';
+    for(let d=1;d<=n;d++){const dt=new Date(y,mo,d),t=dayTot(dt);tot+=t;
+      cells+='<div class="c'+(t?' w':'')+(key(dt)===td?' t':'')+'" onclick="openDay('+dt.getTime()+')">'+d+(t?'<small>'+dur(t)+'</small>':'')+'</div>';}
+    h=nav(first.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}));
+    h+='<div class="big">'+dur(tot)+'</div><div class="lbl">Total du mois</div>';
+    h+='<div class="cal">'+['L','M','M','J','V','S','D'].map(x=>'<div class="h">'+x+'</div>').join('')+cells+'</div>';
+  }
+  v.innerHTML=h;
+}
+
+tick();render();
+setInterval(()=>{tick();if(S.active&&tab!=='month')render();},1000);
+if(window.claude&&claude.use)claude.use('artifact').then(a=>{art=a;document.getElementById('foot').textContent='Sauvegarde synchronisée';}).catch(()=>{});
+document.getElementById('foot').textContent='Données enregistrées sur ce téléphone';
+})();
+</script>
+</body>
+</html>
